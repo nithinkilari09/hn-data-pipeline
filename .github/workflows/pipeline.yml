@@ -1,0 +1,39 @@
+name: Reddit Data Pipeline
+
+on:
+  schedule:
+    - cron: '0 9 * * *'    # 9am UTC daily
+    - cron: '0 18 * * *'   # 6pm UTC daily
+  workflow_dispatch:        # manual trigger
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests boto3 python-dotenv duckdb pandas
+
+      - name: Run fetch
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: python src/fetch.py
+
+      - name: Run transform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: python src/transform.py
