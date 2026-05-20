@@ -66,42 +66,18 @@ TOOL_CATEGORIES = {
 HEADERS = {'User-Agent': 'DataPipeline/1.0 (portfolio project)'}
 
 def extract_tool_mentions(title: str) -> dict:
-    """Extract tool mentions from post title with strict matching"""
+    """Extract tool mentions from post title"""
     title_lower = title.lower()
-    # Add spaces around title for clean word boundary matching
     padded = f" {title_lower} "
     mentions = {}
 
-    # Tools that need exact word boundary matching
     for category, tools in TOOL_CATEGORIES.items():
         for tool in tools:
-            # Skip very short ambiguous terms
-            if tool in ['r', 'go', 'julia']:
-                # Special handling for short names
-                if tool == 'r':
-                    # Only match R as standalone programming language
-                    if ' r ' in padded and any(x in padded for x in 
-                        ['ggplot', 'tidyverse', 'dplyr', 'rstudio', 
-                         'cran', 'r programming', 'r language']):
-                        mentions[tool] = category
+            # Skip tools shorter than 3 characters — too ambiguous
+            if len(tool) < 3:
                 continue
 
-            # Replace hyphens for compound tools
-            tool_spaced = tool.replace('-', ' ')
-            tool_clean = tool.replace('-', '')
-
-            # Check multiple forms
-            found = (
-                f" {tool} " in padded or
-                f" {tool}," in padded or
-                f" {tool}." in padded or
-                f" {tool}:" in padded or
-                f"({tool})" in padded or
-                f" {tool_spaced} " in padded or
-                f" {tool_clean} " in padded
-            )
-
-            # Special cases
+            # Special multi-word tools
             if tool == 'scikitlearn':
                 found = 'scikit-learn' in title_lower or 'sklearn' in title_lower
             elif tool == 'powerbi':
@@ -114,6 +90,18 @@ def extract_tool_mentions(title: str) -> dict:
                 found = 'pytorch' in title_lower or 'torch' in title_lower
             elif tool == 'tensorflow':
                 found = 'tensorflow' in title_lower or 'tf2' in title_lower
+            elif tool == 'pyspark':
+                found = 'pyspark' in title_lower or 'pyspark' in title_lower
+            elif tool == 'bigquery':
+                found = 'bigquery' in title_lower or 'big query' in title_lower
+            else:
+                found = (
+                    f" {tool} " in padded or
+                    f" {tool}," in padded or
+                    f" {tool}." in padded or
+                    f" {tool}:" in padded or
+                    f"({tool})" in padded
+                )
 
             if found:
                 mentions[tool] = category
