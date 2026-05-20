@@ -71,9 +71,12 @@ def extract_tool_mentions(title: str) -> dict:
     padded = f" {title_lower} "
     mentions = {}
 
+    BLACKLIST = ['r', 's', 'go', 'tf']
+
     for category, tools in TOOL_CATEGORIES.items():
         for tool in tools:
-            # Skip tools shorter than 3 characters — too ambiguous
+            if tool in BLACKLIST:
+                continue
             if len(tool) < 3:
                 continue
 
@@ -91,7 +94,7 @@ def extract_tool_mentions(title: str) -> dict:
             elif tool == 'tensorflow':
                 found = 'tensorflow' in title_lower or 'tf2' in title_lower
             elif tool == 'pyspark':
-                found = 'pyspark' in title_lower or 'pyspark' in title_lower
+                found = 'pyspark' in title_lower
             elif tool == 'bigquery':
                 found = 'bigquery' in title_lower or 'big query' in title_lower
             else:
