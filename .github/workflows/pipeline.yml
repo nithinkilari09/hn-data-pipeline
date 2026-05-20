@@ -1,4 +1,4 @@
-name: Reddit Data Pipeline
+name: HN Data Intelligence Pipeline
 
 on:
   schedule:

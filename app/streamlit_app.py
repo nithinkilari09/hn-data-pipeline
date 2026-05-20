@@ -19,7 +19,7 @@ st.set_page_config(
 def get_conn():
     import sys
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    db_path = os.path.join(base_dir, 'data', 'reddit.duckdb')
+    db_path = os.path.join(base_dir, 'data', 'hn_pipeline.duckdb')
     os.makedirs(os.path.join(base_dir, 'data'), exist_ok=True)
     sys.path.append(os.path.join(base_dir, 'src'))
     from transform import load_from_s3, transform, load_to_duckdb

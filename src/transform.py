@@ -107,7 +107,7 @@ def transform(posts: list) -> list:
     print(f"Transformed {len(transformed)} posts")
     return transformed
 
-def load_to_duckdb(posts: list, db_path: str = "data/reddit.duckdb"):
+def load_to_duckdb(posts: list, db_path: str = "data/hn_pipeline.duckdb"):
     """Load transformed posts into DuckDB"""
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     conn = duckdb.connect(db_path)
