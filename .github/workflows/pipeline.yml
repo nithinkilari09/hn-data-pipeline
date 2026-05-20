@@ -2,18 +2,16 @@ name: Reddit Data Pipeline
 
 on:
   schedule:
-    - cron: '0 9 * * *'    # 9am UTC daily
-    - cron: '0 18 * * *'   # 6pm UTC daily
-  workflow_dispatch:        # manual trigger
+    - cron: '0 9 * * *'
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    jobs:
-  run-pipeline:
-    runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repository
