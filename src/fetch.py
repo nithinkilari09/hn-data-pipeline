@@ -7,19 +7,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Pure data domain subreddits
-SUBREDDITS = [
-    'datascience',
-    'dataengineering',
-    'machinelearning',
-    'learnmachinelearning',
-    'analytics',
-    'businessintelligence',
-    'sql',
-    'python',
-    'aws',
-    'rstats'
-]
+# Hacker News API endpoints
+HN_TOP_STORIES = "https://hacker-news.firebaseio.com/v0/topstories.json"
+HN_ITEM = "https://hacker-news.firebaseio.com/v0/item/{}.json"
+HN_NEW_STORIES = "https://hacker-news.firebaseio.com/v0/newstories.json"
+HN_BEST_STORIES = "https://hacker-news.firebaseio.com/v0/beststories.json"
+
+# Number of stories to fetch per category
+STORIES_LIMIT = 100
 
 # Complete data tool categories
 TOOL_CATEGORIES = {
@@ -64,9 +59,7 @@ TOOL_CATEGORIES = {
 }
 
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': 'en-US,en;q=0.9',
+    'User-Agent': 'Mozilla/5.0 (compatible; DataPipeline/1.0)',
 }
 
 def extract_tool_mentions(title: str) -> dict:
@@ -75,13 +68,15 @@ def extract_tool_mentions(title: str) -> dict:
     padded = f" {title_lower} "
     mentions = {}
 
+    BLACKLIST = ['r', 's', 'go', 'tf']
+
     for category, tools in TOOL_CATEGORIES.items():
         for tool in tools:
-            # Skip tools shorter than 3 characters — too ambiguous
+            if tool in BLACKLIST:
+                continue
             if len(tool) < 3:
                 continue
 
-            # Special multi-word tools
             if tool == 'scikitlearn':
                 found = 'scikit-learn' in title_lower or 'sklearn' in title_lower
             elif tool == 'powerbi':
@@ -95,7 +90,7 @@ def extract_tool_mentions(title: str) -> dict:
             elif tool == 'tensorflow':
                 found = 'tensorflow' in title_lower or 'tf2' in title_lower
             elif tool == 'pyspark':
-                found = 'pyspark' in title_lower or 'pyspark' in title_lower
+                found = 'pyspark' in title_lower
             elif tool == 'bigquery':
                 found = 'bigquery' in title_lower or 'big query' in title_lower
             else:
@@ -111,47 +106,83 @@ def extract_tool_mentions(title: str) -> dict:
                 mentions[tool] = category
 
     return mentions
-def fetch_subreddit(subreddit: str, limit: int = 25) -> list:
-    """Fetch top posts from a subreddit"""
-    url = f"https://www.reddit.com/r/{subreddit}/hot.json?limit={limit}"
+
+def fetch_story(story_id: int) -> dict:
+    """Fetch a single story from HN"""
     try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
+        response = requests.get(
+            HN_ITEM.format(story_id),
+            headers=HEADERS,
+            timeout=5
+        )
         response.raise_for_status()
-        data = response.json()
+        return response.json()
+    except:
+        return None
+
+def fetch_stories(endpoint: str, limit: int, source: str) -> list:
+    """Fetch stories from a HN endpoint"""
+    try:
+        response = requests.get(endpoint, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+        story_ids = response.json()[:limit]
+        print(f"Fetching {len(story_ids)} {source} stories...")
+
         posts = []
-        for post in data['data']['children']:
-            p = post['data']
-            title = p.get('title', '')
+        for story_id in story_ids:
+            story = fetch_story(story_id)
+            if not story:
+                continue
+            if story.get('type') != 'story':
+                continue
+            if not story.get('title'):
+                continue
+
+            title = story.get('title', '')
             tool_mentions = extract_tool_mentions(title)
+
             posts.append({
-                'post_id':        p.get('id'),
-                'subreddit':      p.get('subreddit'),
+                'post_id':        str(story.get('id')),
+                'source':         source,
                 'title':          title,
-                'score':          p.get('score'),
-                'upvote_ratio':   p.get('upvote_ratio'),
-                'num_comments':   p.get('num_comments'),
-                'author':         p.get('author'),
-                'created_utc':    p.get('created_utc'),
-                'is_self':        p.get('is_self'),
-                'over_18':        p.get('over_18'),
+                'url':            story.get('url', ''),
+                'score':          story.get('score', 0) or 0,
+                'num_comments':   story.get('descendants', 0) or 0,
+                'author':         story.get('by', ''),
+                'created_utc':    story.get('time', 0),
                 'fetched_at':     datetime.now(timezone.utc).isoformat(),
                 'tool_mentions':  json.dumps(tool_mentions),
                 'mention_count':  len(tool_mentions)
             })
-        print(f"Fetched {len(posts)} posts from r/{subreddit}")
+
+        print(f"Fetched {len(posts)} valid {source} stories")
         return posts
     except Exception as e:
-        print(f"Error fetching r/{subreddit}: {e}")
+        print(f"Error fetching {source}: {e}")
         return []
 
 def fetch_all() -> list:
-    """Fetch posts from all subreddits"""
+    """Fetch from all HN endpoints"""
     all_posts = []
-    for subreddit in SUBREDDITS:
-        posts = fetch_subreddit(subreddit)
-        all_posts.extend(posts)
-    print(f"\nTotal posts fetched: {len(all_posts)}")
-    return all_posts
+
+    # Top stories — most upvoted
+    top = fetch_stories(HN_TOP_STORIES, STORIES_LIMIT, 'top')
+    all_posts.extend(top)
+
+    # Best stories — highest quality
+    best = fetch_stories(HN_BEST_STORIES, STORIES_LIMIT, 'best')
+    all_posts.extend(best)
+
+    # Deduplicate by post_id
+    seen = set()
+    unique_posts = []
+    for post in all_posts:
+        if post['post_id'] not in seen:
+            seen.add(post['post_id'])
+            unique_posts.append(post)
+
+    print(f"\nTotal unique posts: {len(unique_posts)}")
+    return unique_posts
 
 def save_local(posts: list) -> str:
     """Save posts to local data/raw folder"""
