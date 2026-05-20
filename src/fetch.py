@@ -24,7 +24,7 @@ SUBREDDITS = [
 # Complete data tool categories
 TOOL_CATEGORIES = {
     'Programming Languages': [
-        'python', 'r', 'scala', 'julia', 'java'
+        'python', 'scala', 'java', 'golang', 'rust'
     ],
     'Query Languages': [
         'sql', 'nosql', 'graphql', 'sparksql', 'hiveql'
@@ -47,37 +47,78 @@ TOOL_CATEGORIES = {
     ],
     'Machine Learning & AI': [
         'tensorflow', 'pytorch', 'scikitlearn', 'keras',
-        'xgboost', 'lightgbm', 'huggingface', 'langchain'
+        'xgboost', 'lightgbm', 'huggingface', 'langchain',
+        'openai', 'llm', 'llms', 'chatgpt', 'claude'
     ],
     'Data Science Libraries': [
         'pandas', 'numpy', 'scipy', 'matplotlib',
-        'seaborn', 'shap', 'mlflow', 'optuna'
+        'seaborn', 'shap', 'mlflow', 'optuna', 'polars'
     ],
     'Storage & Formats': [
         'parquet', 'iceberg', 'delta', 'hudi', 's3', 'hdfs'
     ],
     'DevOps & Infra': [
-        'docker', 'kubernetes', 'terraform', 'git', 'jenkins'
+        'docker', 'kubernetes', 'terraform', 'git',
+        'github', 'gitlab'
     ]
 }
 
 HEADERS = {'User-Agent': 'DataPipeline/1.0 (portfolio project)'}
 
 def extract_tool_mentions(title: str) -> dict:
-    """Extract tool mentions from post title"""
+    """Extract tool mentions from post title with strict matching"""
     title_lower = title.lower()
+    # Add spaces around title for clean word boundary matching
+    padded = f" {title_lower} "
     mentions = {}
+
+    # Tools that need exact word boundary matching
     for category, tools in TOOL_CATEGORIES.items():
         for tool in tools:
-            # Check for tool mention with word boundary awareness
-            if f' {tool} ' in f' {title_lower} ' or \
-               title_lower.startswith(f'{tool} ') or \
-               title_lower.endswith(f' {tool}') or \
-               f'/{tool}' in title_lower or \
-               f'{tool}/' in title_lower:
-                mentions[tool] = category
-    return mentions
+            # Skip very short ambiguous terms
+            if tool in ['r', 'go', 'julia']:
+                # Special handling for short names
+                if tool == 'r':
+                    # Only match R as standalone programming language
+                    if ' r ' in padded and any(x in padded for x in 
+                        ['ggplot', 'tidyverse', 'dplyr', 'rstudio', 
+                         'cran', 'r programming', 'r language']):
+                        mentions[tool] = category
+                continue
 
+            # Replace hyphens for compound tools
+            tool_spaced = tool.replace('-', ' ')
+            tool_clean = tool.replace('-', '')
+
+            # Check multiple forms
+            found = (
+                f" {tool} " in padded or
+                f" {tool}," in padded or
+                f" {tool}." in padded or
+                f" {tool}:" in padded or
+                f"({tool})" in padded or
+                f" {tool_spaced} " in padded or
+                f" {tool_clean} " in padded
+            )
+
+            # Special cases
+            if tool == 'scikitlearn':
+                found = 'scikit-learn' in title_lower or 'sklearn' in title_lower
+            elif tool == 'powerbi':
+                found = 'power bi' in title_lower or 'powerbi' in title_lower
+            elif tool == 'huggingface':
+                found = 'hugging face' in title_lower or 'huggingface' in title_lower
+            elif tool == 'langchain':
+                found = 'langchain' in title_lower or 'lang chain' in title_lower
+            elif tool == 'pytorch':
+                found = 'pytorch' in title_lower or 'torch' in title_lower
+            elif tool == 'tensorflow':
+                found = 'tensorflow' in title_lower or 'tf2' in title_lower
+
+            if found:
+                mentions[tool] = category
+
+    return mentions
 def fetch_subreddit(subreddit: str, limit: int = 25) -> list:
     """Fetch top posts from a subreddit"""
     url = f"https://www.reddit.com/r/{subreddit}/hot.json?limit={limit}"
