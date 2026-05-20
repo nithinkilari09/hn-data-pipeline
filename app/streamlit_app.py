@@ -24,13 +24,10 @@ def get_conn():
     os.makedirs(os.path.join(base_dir, 'data'), exist_ok=True)
 
     sys.path.append(os.path.join(base_dir, 'src'))
-    from transform import load_from_s3, load_local_files, transform, load_to_duckdb
+    from transform import load_from_s3, transform, load_to_duckdb
 
     bucket = os.getenv('S3_BUCKET')
-    if bucket:
-        posts = load_from_s3(days=7)
-    else:
-        posts = load_local_files()
+    posts = load_from_s3(days=7)
 
     if posts:
         transformed = transform(posts)
