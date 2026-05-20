@@ -16,36 +16,48 @@ st.set_page_config(
 
 @st.cache_resource
 def get_conn():
+    import sys
     import boto3
-    import glob
 
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     db_path = os.path.join(base_dir, 'data', 'reddit.duckdb')
+    os.makedirs(os.path.join(base_dir, 'data'), exist_ok=True)
 
-    # Always rebuild from S3 if available, otherwise use local
+    sys.path.append(os.path.join(base_dir, 'src'))
+    from transform import load_from_s3, load_local_files, transform, load_to_duckdb
+
     bucket = os.getenv('S3_BUCKET')
-
     if bucket:
-        # Load from S3
-        import sys
-        sys.path.append(os.path.join(base_dir, 'src'))
-        from transform import load_from_s3, transform, load_to_duckdb
         posts = load_from_s3(days=7)
-        if posts:
-            transformed = transform(posts)
-            load_to_duckdb(transformed, db_path)
-    elif os.path.exists(db_path):
-        pass  # use existing local DuckDB
     else:
-        # Build from local files as fallback
-        import sys
-        sys.path.append(os.path.join(base_dir, 'src'))
-        from transform import load_local_files, transform, load_to_duckdb
         posts = load_local_files()
+
+    if posts:
         transformed = transform(posts)
         load_to_duckdb(transformed, db_path)
 
-    return duckdb.connect(db_path, read_only=True)
+    # Only connect if file exists
+    if os.path.exists(db_path):
+        return duckdb.connect(db_path, read_only=True)
+    else:
+        # Return empty in-memory database
+        conn = duckdb.connect(':memory:')
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS posts (
+                post_id VARCHAR, subreddit VARCHAR, title VARCHAR,
+                score INTEGER, upvote_ratio DOUBLE, num_comments INTEGER,
+                engagement_score DOUBLE, author VARCHAR, created_date VARCHAR,
+                created_hour INTEGER, created_weekday VARCHAR, is_self BOOLEAN,
+                fetched_at VARCHAR, tool_mentions VARCHAR, mention_count INTEGER
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS tool_mentions (
+                post_id VARCHAR, tool VARCHAR, category VARCHAR,
+                subreddit VARCHAR, score INTEGER, fetched_at VARCHAR
+            )
+        """)
+        return conn
 
 conn = get_conn()
 
