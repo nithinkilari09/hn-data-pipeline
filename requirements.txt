@@ -1,0 +1,7 @@
+streamlit
+pandas
+plotly
+duckdb
+boto3
+requests
+python-dotenv
