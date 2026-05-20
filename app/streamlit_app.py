@@ -93,10 +93,10 @@ if page == "Overview":
 
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Total Posts", f"{int(kpis['total_posts'][0] or 0):,}")
-c2.metric("Subreddits Tracked", f"{int(kpis['subreddits'][0] or 0)}")
-c3.metric("Unique Authors", f"{int(kpis['unique_authors'][0] or 0):,}")
-c4.metric("Avg Post Score", f"{int(kpis['avg_score'][0] or 0):,}")
-c5.metric("Tool Mentions", f"{int(kpis['total_tool_mentions'][0] or 0):,}")
+    c2.metric("Subreddits Tracked", f"{int(kpis['subreddits'][0] or 0)}")
+    c3.metric("Unique Authors", f"{int(kpis['unique_authors'][0] or 0):,}")
+    c4.metric("Avg Post Score", f"{int(kpis['avg_score'][0] or 0):,}")
+    c5.metric("Tool Mentions", f"{int(kpis['total_tool_mentions'][0] or 0):,}")
 
     st.markdown("---")
 
