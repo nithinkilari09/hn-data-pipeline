@@ -16,22 +16,29 @@ This pipeline answers: **What tools is the serious tech community actively discu
 
 ## Pipeline Architecture
 
-**GitHub Actions** (cron: 9am + 6pm UTC)
-→ **src/fetch.py** — Hacker News Firebase API
-→ fetches top + best stories (~150 unique posts)
-→ extracts tool mentions (80+ tools, 10 categories)
-→ **AWS S3** — time-partitioned data lake (raw/YYYY/MM/DD/HH-MM.json)
-→ 7-day rolling window applied
-→ **src/transform.py** — cleans, enriches, computes engagement scores
-→ **DuckDB** — columnar analytics layer
-→ **Streamlit** — 6-page interactive dashboard
+**GitHub Actions** (cron: 9am + 6pm UTC daily)
+
+→ **src/fetch.py** calls Hacker News Firebase API
+
+→ Fetches top 100 + best 100 stories, deduplicates to ~150 unique posts
+
+→ Extracts tool mentions from titles (80+ tools across 10 categories)
+
+→ **AWS S3** stores raw JSON with time-partitioned structure: raw/YYYY/MM/DD/HH-MM.json
+
+→ **src/transform.py** reads last 7 days from S3, cleans and enriches data, computes engagement scores
+
+→ **DuckDB** columnar analytics layer with posts and tool_mentions tables
+
+→ **Streamlit** 6-page interactive intelligence dashboard
+
 ---
 
 ## Key Features
 
 - **Fully automated** — runs twice daily with zero manual intervention
 - **7-day rolling window** — always shows what is trending NOW, not historical noise
-- **80+ tools tracked** across 10 categories: Programming Languages, Data Engineering, Cloud Platforms, ML & AI, Databases, Visualization & BI, Storage & Formats, DevOps & Infra
+- **80+ tools tracked** across 10 categories: Programming Languages, Data Engineering, Cloud Platforms, ML and AI, Databases, Visualization and BI, Storage and Formats, DevOps and Infra
 - **Tool mention extraction** from post titles using keyword matching with special case handling for compound names (scikit-learn, Power BI, HuggingFace)
 - **Engagement scoring** — weighted combination of upvotes (60%) and comments (40%)
 - **Zero cost** — entirely on free tiers (GitHub Actions, AWS S3, Streamlit Cloud)
@@ -55,13 +62,13 @@ This pipeline answers: **What tools is the serious tech community actively discu
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Scheduling | GitHub Actions (cron) | Trigger pipeline twice daily |
+| Scheduling | GitHub Actions cron | Trigger pipeline twice daily |
 | Data Source | Hacker News Firebase API | Live tech community stories |
 | Storage | AWS S3 | Time-partitioned raw data lake |
 | Transformation | Python + pandas | Clean, enrich, deduplicate |
 | Analytics | DuckDB | Columnar query layer |
 | Dashboard | Streamlit + Plotly | Interactive visualizations |
-| Version Control | Git + GitHub | Source control + CI/CD |
+| Version Control | Git + GitHub | Source control and CI/CD |
 
 ---
 
@@ -91,13 +98,16 @@ cd hn-data-pipeline
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
+```
 
-# Create .env file with AWS credentials
-# AWS_ACCESS_KEY_ID=your_key
-# AWS_SECRET_ACCESS_KEY=your_secret
-# AWS_REGION=us-east-1
-# S3_BUCKET=your-bucket-name
+Create a .env file with your AWS credentials:
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+AWS_REGION=us-east-1
+S3_BUCKET=your-bucket-name
+Then run:
 
+```bash
 python src/fetch.py
 python src/transform.py
 streamlit run app/streamlit_app.py
@@ -109,4 +119,5 @@ streamlit run app/streamlit_app.py
 
 **Nithin Kilari**
 M.S. Computer Science (Data Science) — Oklahoma City University, 2026
+
 [LinkedIn](https://www.linkedin.com/in/kilari-nithin-619481272/) | [GitHub](https://github.com/nithinkilari09)
