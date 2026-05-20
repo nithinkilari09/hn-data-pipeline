@@ -15,19 +15,16 @@ This pipeline answers: **What tools is the serious tech community actively discu
 ---
 
 ## Pipeline Architecture
-GitHub Actions (cron: 9am + 6pm UTC)
-↓
-src/fetch.py — Hacker News Firebase API
-↓ fetches top + best stories (~150 unique posts)
-↓ extracts tool mentions (80+ tools, 10 categories)
-AWS S3 — time-partitioned data lake
-raw/YYYY/MM/DD/HH-MM.json
-↓ 7-day rolling window
-src/transform.py — cleans, enriches, computes engagement scores
-↓
-DuckDB — columnar analytics layer
-↓
-Streamlit — 6-page interactive dashboard
+
+**GitHub Actions** (cron: 9am + 6pm UTC)
+→ **src/fetch.py** — Hacker News Firebase API
+→ fetches top + best stories (~150 unique posts)
+→ extracts tool mentions (80+ tools, 10 categories)
+→ **AWS S3** — time-partitioned data lake (raw/YYYY/MM/DD/HH-MM.json)
+→ 7-day rolling window applied
+→ **src/transform.py** — cleans, enriches, computes engagement scores
+→ **DuckDB** — columnar analytics layer
+→ **Streamlit** — 6-page interactive dashboard
 ---
 
 ## Key Features
